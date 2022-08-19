@@ -17,7 +17,7 @@ class SortingConfig:
             'Ultra': 'p',
             '4k': 'k',
         }
-        self.cli_call = 'manim -pql animator.py SortAnimation'
+        self.cli_call = 'manim -pql animator.py AnimationState'
 
         with parent:
             # Instructions heading
@@ -35,20 +35,23 @@ class SortingConfig:
                     ''
                 )
                 Text(instructions)
-
+            Spacer(height=8)
+            
             cfg = {'label': 'Algorithms settings', 'default_open': True}
             with CollapsingHeader(**cfg):
                 # Algorithm select dropdown menu
                 cfg = {
                     'label': 'Algorithm',
-                    'items': ['Bubble sort', 'Merge sort', 'Insertion sort'],
+                    'items': ['Bubble sort', 'Insertion sort', 'Merge sort'],
+                    'default_value': 'Merge sort'
                 }
                 self.cmb_algo = Combo(**cfg)
 
 
                 # Manual input box
                 cfg = {
-                    'label': 'Input sequence'
+                    'label': 'Input sequence',
+                    'default_value': '[1,2,3,4]'
                 }
                 self.int_seq = InputText(**cfg)
                     
@@ -56,9 +59,9 @@ class SortingConfig:
                 # Sequence length
                 cfg = {
                     'label': 'Sequence length',
-                    'default_value': 3,
+                    'default_value': 4,
                     'min_value': 0,
-                    'max_value': 999 
+                    'max_value': 100
                 }
                 self.ini_seq_len = InputInt(**cfg)
 
@@ -78,6 +81,7 @@ class SortingConfig:
                     'callback': self.generate_sequence
                 }
                 self.btn_seq_gen = Button(**cfg)
+            Spacer(height=8)
 
             cfg = {'label': 'Animation settings', 'default_open': True}
             with CollapsingHeader(**cfg):
@@ -110,16 +114,22 @@ class SortingConfig:
                     'default_value': True
                 }
                 self.chk_disp_txt = Checkbox(**cfg)
-
+            Spacer(height=8)
 
     def generate_sequence(self) -> None:
         self.int_seq.value = [random.randint(*self.iim_seq_range.value[:2]) 
                               for _ in range(self.ini_seq_len.value)]
         
     def write_cfg_file(self) -> None:
+        sequence = (self.int_seq.value.replace('[','')
+                                      .replace(']','')
+                                      .split(','))
+
+        sequence = [int(val) for val in sequence]
+
         cfg = {
             'algorithm': self.cmb_algo.value,
-            'sequence': self.int_seq.value,
+            'sequence': sequence,
             'obj_type': self.cmb_obj_type.value,
             'vis_type': self.cmb_vis_type.value,
             'text_render': self.chk_disp_txt.value
@@ -130,22 +140,14 @@ class SortingConfig:
     def update_cli_call(self) -> None:
         quality = self.qualities[self.cmb_qual.value]
 
-        self.cli_call = f'manim -pq{quality} animator.py SortAnimation'
+        self.cli_call = f'manim -pq{quality} animator.py AnimationState'
 
     def add_remove_vis_type(self, sender) -> None:
         if self.cmb_obj_type.value == 'Bar':
             self.cmb_vis_type.show = False
-            # if hasattr(self, 'cmb_vis_type'):
-            #     self.cmb_vis_type.delete()
-            #     del self.cmb_vis_type
         elif self.cmb_obj_type.value == 'Node':
-            # cfg = {
-            #     'label': 'Variable characteristic',
-            #     'items': ['Size', 'Color'],
-            #     'default_value': 'Size',
-            # }
-            # with sender.parent:
             self.cmb_vis_type.show = True 
+
 
 class GUI(Application, Viewport):
     def __init__(self) -> None:

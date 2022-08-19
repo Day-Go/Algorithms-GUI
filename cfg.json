@@ -1,1 +1,1 @@
-{"algorithm": "Bubble sort", "sequence": "[52, 94, 43, 100, 12]", "obj_type": "Node", "vis_type": "Color", "text_render": true}
+{"algorithm": "Merge sort", "sequence": [1, 2, 3, 4], "obj_type": "Bar", "vis_type": "Size", "text_render": true}

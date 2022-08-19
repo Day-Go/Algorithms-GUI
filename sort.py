@@ -10,7 +10,8 @@ class StepGenerator:
         }
 
         self.sequence = sequence
-        self.StepData = namedtuple('StepData', ['name', 'i1', 'i2'])
+        self.StepData = namedtuple('StepData', ['name', 'arg1', 'arg2'])
+        # self.StepData = namedtuple('StepData', ['name', 'args'])
 
 
     def bubble_sort(self):
@@ -19,19 +20,19 @@ class StepGenerator:
 
         for n in range(len(s)-1, 0, -1):
             for i in range(n):
-                yield self.StepData(name='Compare', i1=i, i2=i+1) 
+                yield self.StepData(name='Compare', arg1=i, arg2=i+1) 
                 if s[i] > s[i + 1]:
                     swapped = True
                     s[i], s[i+1] = s[i+1], s[i] 
-                    yield self.StepData(name='GT', i1=i, i2=i+1)
+                    yield self.StepData(name='Swap', arg1=i, arg2=i+1)
                 else:
-                    yield self.StepData(name='LT', i1=i, i2=i+1)
+                    yield self.StepData(name='Continue', arg1=i, arg2=i+1)
 
             # if no swaps occur while passing over the list then it's sorted
             if not swapped:
                 return
 
-        yield self.StepData(name='End', i1=0, i2=0)
+        yield self.StepData(name='End', arg1=0, arg2=0)
 
     def insertion_sort(self) -> None:
         s = self.sequence
@@ -40,92 +41,75 @@ class StepGenerator:
             key = s[step]
             j = step - 1
                   
-            while j >= 0 and key < s[j]:
-                s[j + 1] = s[j]
-                j = j - 1
-                yield self.StepData(name='Shift Right', i1=step, i2=j)
-            
-            s[j + 1] = key
-            yield self.StepData(name='Insert', i1=step, i2=j)
+            # Add extra comparison & continue steps if we never enter 
+            # the while loop
+            if not (j >= 0 and key < s[j]):
+                yield self.StepData(name='Compare', arg1=j, arg2=step) 
+                yield self.StepData(name='Continue', arg1=j, arg2=step)
 
+            while j >= 0 and key < s[j]:
+                yield self.StepData(name='Compare', arg1=j, arg2=j+1) 
+                s[j + 1] = s[j]
+                yield self.StepData(name='Swap', arg1=j, arg2=j+1)
+                j = j - 1
+                yield self.StepData(name='Continue', arg1=j, arg2=step)
+                
+            s[j + 1] = key
+            
+
+        yield self.StepData(name='End', arg1=0, arg2=0)
 
     def run_merge_sort(self):
-        def merge_sort(sequence):
-            
-            if len(sequence) > 1:
-                # Selecte sequence
-                yield self.Operation(name='Select', data=sequence, indicies=1)
+        def merge_sort(sequence: list, side: str):
+            yield self.StepData(name='Group', arg1=sequence, arg2=side)
 
+            if len(sequence) > 1:
                 #  r is the point where the sequence is divided into 
                 # two subsequences
-                r = len(sequence)//2
-                L = sequence[:r]
-                M = sequence[r:]
+                mid = len(sequence)//2
+                left = sequence[:mid]
+                right = sequence[mid:]
+
+                yield self.StepData(name='Split', arg1=left, arg2=right)
+
+                # yield self.StepData(name='Split', arg1=left, arg2='left')
+                # yield self.StepData(name='Split', arg1=right, arg2='right')
 
                 # Sort the two halves
-                yield from merge_sort(L)
-                yield from merge_sort(M)
+                yield from merge_sort(left, 'left')
+                yield from merge_sort(right, 'right')
 
                 i = j = k = 0
 
-                # Until we reach either end of either L or M, pick larger among
-                # elements L and M and place them in the correct 
+                # Until we reach either end of either left or right, pick larger among
+                # elements left and right and place them in the correct 
                 # position at A[p..r]
-                while i < len(L) and j < len(M):
-                    if L[i] < M[j]:
-                        sequence[k] = L[i]
+                while i < len(left) and j < len(right):
+                    if left[i] < right[j]:
+                        sequence[k] = left[i]
                         i += 1
-                        # Comparison result: Left < Right -> Sorted
-                        yield self.Operation(
-                            name='Less',
-                            data=sequence, 
-                            indicies=2
-                        )
                     else:
-                        sequence[k] = M[j]
+                        sequence[k] = right[j]
                         j += 1
-                        # Comparison result: Left > Right
-                        yield self.Operation(
-                            name='Greater', 
-                            data=sequence, 
-                            indicies=3
-                        )
 
                     k += 1
 
-                # When we run out of elements in either L or M,
+                # When we run out of elements in either left or right,
                 # pick up the remaining elements and put in A[p..r]
-                while i < len(L):
-                    sequence[k] = L[i]
+                while i < len(left):
+                    sequence[k] = left[i]
                     i += 1
                     k += 1
 
-                    # Reorder
-                    yield self.Operation(
-                        name='Copy left', 
-                        data=sequence, 
-                        indicies=4
-                    )
-
-
-                while j < len(M):
-                    sequence[k] = M[j]
+                while j < len(right):
+                    sequence[k] = right[j]
                     j += 1
                     k += 1
 
-                    # Perserve order
-
-                    yield self.Operation(
-                        name='Copy right', 
-                        data=sequence, 
-                        indicies=[]
-                    )
-
-            # Sorted array
-            yield self.Operation(name='Sorted', data=sequence, indicies=6)
+                yield self.StepData(name='ExitRecursion', arg1=None, arg2=None)
             
 
-        generator = merge_sort(self.sequence)
+        generator = merge_sort(self.sequence, 0)
         
         return generator
 
